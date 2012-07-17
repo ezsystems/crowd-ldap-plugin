@@ -1,0 +1,36 @@
+<!DOCTYPE custom-attributes SYSTEM "http://ez.no/crowd/ldap.custom-attributes.dtd">
+
+<custom-attributes>  
+	<directory name="Community LDAP"> 
+		<server>http://sdfasdf.no:8000</server>
+		<server>123456789</server>
+		<user>
+			<attribute key="displayName" type="STRING">
+				<ldap-name>displayName</ldap-name>
+			</attribute>
+			<attribute key="photo" type="BINARY">
+				<ldap-name>jpegPhoto</ldap-name>
+			</attribute>
+			<attribute key="description" type="STRING">
+				<ldap-name>description</ldap-name>
+			</attribute>
+			<attribute key="labeledURI" type="STRING">
+				<ldap-name>labeledURI</ldap-name>
+			</attribute>
+			<attribute key="title" type="STRING">
+				<ldap-name>title</ldap-name>
+			</attribute>
+			<attribute key="someInt" type="INTEGER">
+				<ldap-name>int</ldap-name>
+			</attribute>
+			<attribute key="someDouble" type="DOUBLE">
+				<ldap-name>double</ldap-name>
+			</attribute>			
+		</user>
+		<group>
+			<attribute key="groupName" type="STRING">
+				<ldap-name>displayName</ldap-name>
+			</attribute>
+		</group>
+	</directory>
+</custom-attributes>

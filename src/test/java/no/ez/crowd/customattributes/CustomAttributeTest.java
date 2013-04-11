@@ -1,10 +1,12 @@
 package no.ez.crowd.customattributes;
 
+import java.util.List;
 import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 
@@ -23,6 +25,18 @@ public class CustomAttributeTest {
 		test.hashCode();
 	}
 	
+	
+	@Test
+	public void testUnwrapKeys() {
+		
+		CustomAttribute a = new CustomAttribute("a", AttributeType.STRING, "aa");
+		CustomAttribute b = new CustomAttribute("b", AttributeType.BINARY, "bb");
+		CustomAttribute c = new CustomAttribute("c", AttributeType.STRING, "cc");
+		
+		List<CustomAttribute> attrs = Lists.newArrayList(a, b, c);
+		
+		Assert.assertArrayEquals(new String[] {"a", "b", "c"}, CustomAttribute.unwrapKeys(attrs).toArray());
+	}
 	
 	@Test
 	public void testEqual() {

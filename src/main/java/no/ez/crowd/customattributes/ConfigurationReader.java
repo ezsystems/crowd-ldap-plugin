@@ -5,14 +5,24 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.xml.XMLConstants;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.Source;
 import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -20,7 +30,9 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.XMLReaderFactory;
+
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 
 
 
@@ -31,12 +43,8 @@ import org.xml.sax.helpers.XMLReaderFactory;
  */
 class ConfigurationReader {
 	
-	
 	private final Logger logger = LoggerFactory.getLogger(ConfigurationReader.class);
 
-	
-	private static final String FEATURE_NAMESPACES = "http://xml.org/sax/features/namespaces";
-	 
 	
 	private JAXBContext context;
 	
@@ -70,6 +78,40 @@ class ConfigurationReader {
 	@Nonnull
 	public Collection<CustomAttribute> readGroupAttributes(long directoryId, String directoryUrl) {
 		return readAttributes(directoryId, directoryUrl).groupAttrs;
+	}
+	
+
+
+	public Set<CustomAttribute> readBinaryAttributes(long directoryId, String directoryUrl) {
+		DoubleList attrs = readAttributes(directoryId, directoryUrl);
+		
+		Set<CustomAttribute> bin = new HashSet<CustomAttribute>();
+		Set<CustomAttribute> nonbin = new HashSet<CustomAttribute>();
+		
+		Iterator<CustomAttribute> it = Iterators.concat(attrs.userAttrs.iterator(), attrs.groupAttrs.iterator());
+		
+		while (it.hasNext()) {
+			CustomAttribute attr = it.next();
+			if (attr.getType().isBinary()) {
+				bin.add(attr);
+			} else {
+				nonbin.add(attr);
+			}
+		}
+		
+		Set<CustomAttribute> both = Sets.intersection(bin, nonbin);
+		
+		if ( ! both.isEmpty()) {
+			
+			bin.removeAll(both);
+			
+			logger.warn(
+					"Following attributes are defined at least twice as binary and non-binary for the same " +
+					"directory ID (" + directoryId + ";" + directoryUrl + "): " + both + ". Binary attributes " +
+					"were swiched to non-binary are won't be read from LDAP correctly.");
+		}
+		
+		return bin;
 	}
 	
 
@@ -131,21 +173,47 @@ class ConfigurationReader {
 				Unmarshaller um = context.createUnmarshaller();
 				
 				try {
-					XMLReader xmlreader = XMLReaderFactory.createXMLReader();
-					xmlreader.setFeature(FEATURE_NAMESPACES, false);
-					xmlreader.setEntityResolver(new SmallEntityResolver());
 					
-					Source xmlsource = new SAXSource(xmlreader, new InputSource(new FileInputStream(source)));
-				
-					Configuration result = (Configuration)um.unmarshal(xmlsource);
-				
-					config = result; // updating cache.
-					configLastLoad = new DateTime();
+					SmallEntityResolver resolver = new SmallEntityResolver("Reading custom attributes property file");
 					
-					logger.info("Custom attribute configuration parsed. Loaded directories: " + result.getDirectories() + ".");
+					SAXParserFactory  factory = SAXParserFactory.newInstance();
 					
+					factory.setValidating(true);
+					SchemaFactory ssf = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+					
+					Schema schema = ssf.newSchema(new StreamSource(resolver.getSchema()));
+					
+					factory.setSchema(schema);
+					
+					SAXParser parser = factory.newSAXParser();
+					
+					parser.getXMLReader().setEntityResolver(resolver);
+		
+					XMLReader xmlreader = parser.getXMLReader();
+					
+					xmlreader.setErrorHandler(resolver);
+					xmlreader.setEntityResolver(resolver);
+					
+					FileInputStream xmlsourceFile = new FileInputStream(source);
+					try {
+						Source xmlsource = new SAXSource(xmlreader, new InputSource(xmlsourceFile));
+					
+						Configuration result = (Configuration)um.unmarshal(xmlsource);
+					
+						config = result; // updating cache.
+						configLastLoad = new DateTime();
+						
+						logger.info("Custom attribute configuration parsed. Loaded directories: " + result.getDirectories() + ".");
+						
+					} finally {
+						xmlsourceFile.close();
+					}
 				} catch (SAXException e) {
 					throw new JAXBException("XML parsing error. " + e.getMessage(), e);
+				} catch (ParserConfigurationException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+
 				}
 			}
 			
@@ -175,6 +243,8 @@ class ConfigurationReader {
 		@Nonnull
 		final List<CustomAttribute> groupAttrs = new ArrayList<CustomAttribute>();
 	}
+
+
 	
 	
 }

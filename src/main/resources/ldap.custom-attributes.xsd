@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+	xmlns="http://ez.no/crowd/ldap.custom-attributes.xsd"
+	elementFormDefault="qualified" attributeFormDefault="unqualified"
+	targetNamespace="http://ez.no/crowd/ldap.custom-attributes.xsd">
+
+	<xs:element name="custom-attributes">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element type="Directory" name="directory" minOccurs="0" maxOccurs="unbounded" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:complexType name="Directory">
+		<xs:sequence>
+			<xs:element name="server" maxOccurs="unbounded" type="xs:string" />
+			<xs:element name="user" type="Attributes"/>
+			<xs:element name="group" type="Attributes"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="required" />
+	</xs:complexType>
+ 
+	<xs:complexType name="Attributes">
+		<xs:sequence>
+			<xs:element name="attribute" type="Attribute" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="Attribute">
+		<xs:sequence>
+			<xs:element name="ldap-name"  type="xs:string" />
+			<xs:element name="format" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:attribute name="pattern" type="xs:string" use="required" />
+						<xs:attribute name="time-zone" type="xs:string" />
+					</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="key" type="xs:string" use="required" />
+		<xs:attribute name="operational" type="xs:boolean" use="optional" />
+		<xs:attribute name="type" default="STRING">
+			<xs:simpleType>
+				<xs:restriction base="xs:NMTOKEN">
+					<xs:enumeration value="STRING" />
+					<xs:enumeration value="BINARY" />
+					<xs:enumeration value="INTEGER" />
+					<xs:enumeration value="DOUBLE" />
+					<xs:enumeration value="DATETIME" />
+					<xs:enumeration value="LOCAL_DATETIME" />
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+
+</xs:schema>

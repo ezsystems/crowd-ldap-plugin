@@ -1,9 +1,14 @@
 package no.ez.crowd.customattributes;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.naming.directory.SearchControls;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -31,9 +36,19 @@ public class CustomAttribute {
 	@XmlAttribute(name="type", required=true)
 	private AttributeType type;
 	
+	
+	/** @see #isOperational() */
+	@XmlAttribute(name="operational", required=false)
+	private boolean operational = false;
+	
 
 	@XmlElement(name="ldap-name")
 	private String ldapName;
+
+	
+	@XmlElement(name="format")
+	@CheckForNull
+	private List<Format> formats; 
 	
 	
 	/** Do not delete. JAXB needs it! */
@@ -43,11 +58,21 @@ public class CustomAttribute {
 	
 	
 	/** This class should by created by JAXB. This constructor is for testing.
-	 **/
+	 */
 	public CustomAttribute(String key, AttributeType type, String ldapName) {
 		this.key = key;
 		this.type = type;
 		this.ldapName = ldapName;
+	}
+	
+	
+	/** This class should by created by JAXB. This constructor is for testing.
+	 */
+	public CustomAttribute(String key, AttributeType type, String ldapName, List<Format> formats) {
+		this.key = key;
+		this.type = type;
+		this.ldapName = ldapName;
+		this.formats = formats;
 	}
 
 
@@ -56,6 +81,16 @@ public class CustomAttribute {
 	}
 
 	
+	@Nonnull
+	public List<Format> getFormats() {
+		List<Format> result = formats;
+		if (result == null) {
+			result = new ArrayList<Format>();
+		}
+		return result;
+	}
+	
+	
 	public AttributeType getType() {
 		return type;
 	}
@@ -63,6 +98,16 @@ public class CustomAttribute {
 	
 	public String getLdapName() {
 		return ldapName;
+	}
+	
+	
+	/** Returns <code>true</code> for operational attributes. Special attribute type
+	 *  introduced in LDAP3, which are not an attribute of any class. Such an attributes
+	 *  are usually not returned by default and must be requested explicitly using 
+	 *  {@link SearchControls}.
+	 */
+	public boolean isOperational() {
+		return operational;
 	}
 
 
@@ -89,6 +134,35 @@ public class CustomAttribute {
 	}
 	
 	
+	/** Unwraps values of the field {@link CustomAttribute#key} from all the specified
+	 *  attribute objects. 
+	 *  
+	 *  @see #unwrapLdapNames(Set)
+	 *  */
+	@Nonnull
+	public static List<String> unwrapKeys(@Nonnull Collection<? extends CustomAttribute> attrs) {
+		List<String> result = new ArrayList<String>(attrs.size());
+		for (CustomAttribute attr : attrs) {
+			result.add(attr.getKey());	
+		}
+		return result;
+	}
+	
+	
+	/** Unwraps values of the field {@link CustomAttribute#ldapName} from all the specified
+	 *  attribute objects. 
+	 *  
+	 *  @see #unwrapKeys(Collection)
+	 *  */
+	public static List<String> unwrapLdapNames(Collection<CustomAttribute> attrs) {
+		List<String> result = new ArrayList<String>(attrs.size());
+		for (CustomAttribute attr : attrs) {
+			result.add(attr.getLdapName());	
+		}
+		return result;
+	}
+	
+	
 	/** Returns the first element with the specified key found in the collection.
 	 *  
 	 *  @param key
@@ -110,6 +184,23 @@ public class CustomAttribute {
 		}
 		return null;
 	}
+
 	
+	/** Returns a new created list with only operational attributes.
+	 *  
+	 *  @return
+	 *  	never <code>null</code>.
+	 */
+	@Nonnull
+	public static List<CustomAttribute> filterOperationalOnly(@Nonnull Collection<CustomAttribute> attrs) {
+		List<CustomAttribute> result = new ArrayList<CustomAttribute>();
+		for (CustomAttribute attr : attrs) {
+			if (attr.isOperational()) {
+				result.add(attr);
+			}
+		}
+		return result;
+	}
+
 	
 }

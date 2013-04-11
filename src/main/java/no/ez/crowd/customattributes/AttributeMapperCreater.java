@@ -6,17 +6,26 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.naming.directory.SearchControls;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.atlassian.crowd.directory.ldap.LDAPPropertiesMapperImpl;
 import com.atlassian.crowd.directory.ldap.mapper.attribute.AttributeMapper;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 
 
@@ -82,8 +91,11 @@ class AttributeMapperCreater {
 			}
 			
 			Reader crowdInitReader = new InputStreamReader(crowdInit, propEncoding);
-			
-			init(crowdInitReader);
+			try {
+				init(crowdInitReader);
+			} finally {
+				crowdInitReader.close();
+			}
 		} catch (IOException e) {
 			throw new RuntimeException(
 					"Error accessing Crown home directory, specified in Crowd initialization property file [" + CROWD_INIT_PROPERTIES + "].", e);
@@ -139,6 +151,47 @@ class AttributeMapperCreater {
 		return result;
 	}
     
+	
+	/** Returns the LDAP names for all the attributes (mixed user and group attributes).
+	 * 
+	 *  @return
+	 *  	never <code>null</code>, but can be empty.
+	 */
+	@Nonnull
+	protected Set<String> getOperationalAttributeLdapNames(long directoryId, @Nullable String directoryUrl) {
+		
+		Collection<CustomAttribute> userAttrs  = configuration.readUserAttributes(directoryId, directoryUrl);
+		Collection<CustomAttribute> groupAttrs = configuration.readGroupAttributes(directoryId, directoryUrl);
+		
+		Set<String> result = new HashSet<String>();
+		result.addAll(CustomAttribute.unwrapLdapNames(CustomAttribute.filterOperationalOnly(userAttrs)));
+		result.addAll(CustomAttribute.unwrapLdapNames(CustomAttribute.filterOperationalOnly(groupAttrs)));
+		
+		return result;
+	}
+	
+	
+	/** Puts all the operational attribute LDAP names to the specified {@link SearchControls}
+	 *  objects. If no attributes specified, appends the "*" to get all the attributes and
+	 *  operational attributes.
+	 */
+	public void putOperationalAttribute(@Nonnull SearchControls result, long directoryId, @Nullable String directoryUrl) {
+    	
+    	Set<String> ops = getOperationalAttributeLdapNames(directoryId, directoryUrl);
+    	
+    	if ( ! ops.isEmpty()) {
+    		String[] attrs = result.getReturningAttributes();
+    		List<String> newAttrs = new ArrayList<String>(); 
+    		if (attrs == null) {
+    			newAttrs.add("*");
+    		} else {
+				newAttrs.addAll(Arrays.asList(attrs));
+    		}
+    		newAttrs.addAll(ops);
+    		result.setReturningAttributes(newAttrs.toArray(new String[newAttrs.size()]));
+    	}
+	}
+	
     
 	@Nonnull
     public List<? extends AttributeMapper> createGroupAttributeMappers(long directoryId, @Nullable String directoryUrl) {
@@ -148,9 +201,38 @@ class AttributeMapperCreater {
 		List<? extends AttributeMapper> result = CustomAttributeMapper.createList(attrs);
 		return result;
 	}
+	
+	
+	/** Adds all the binary attribute names to the property 
+	 *  {@value LDAPPropertiesMapperImpl#CONNECTION_BINARY_ATTRIBUTES}
+	 *  as defined in {@linkplain "http://docs.oracle.com/javase/jndi/tutorial/ldap/misc/attrs.html"}  
+	 * 
+	 *  @param properties
+	 *  	environment properties. Only the specified property will be altered (and added, if needed).
+	 *  	It must be not <code>null</code>.
+	 */
+	public void putBinaryAttributes(@Nonnull Map<String, String> env, long directoryId, @Nullable String directoryUrl){
+    	
+    	String binProperty = env.get(LDAPPropertiesMapperImpl.CONNECTION_BINARY_ATTRIBUTES);
+    	
+    	List<String> binaryAttributes;
+    	
+    	if (binProperty != null && binProperty.length() != 0) {
+    		binaryAttributes = Lists.newArrayList(binProperty.split(" "));
+    	} else {
+    		binaryAttributes = new ArrayList<String>();
+    	}
+    	
+    	Set<CustomAttribute> binAttrs = configuration.readBinaryAttributes(directoryId, directoryUrl);
+    	
+    	List<String> keys = CustomAttribute.unwrapLdapNames(binAttrs);
+    	binaryAttributes.addAll(keys);
+    	
+    	binProperty = Joiner.on(' ').join(binaryAttributes);
+    	
+    	env.put(LDAPPropertiesMapperImpl.CONNECTION_BINARY_ATTRIBUTES, binProperty);
+    }
     
-    
-
 }
 
 

@@ -1,6 +1,10 @@
-<!DOCTYPE custom-attributes SYSTEM "http://ez.no/crowd/ldap.custom-attributes.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
 
-<custom-attributes>  
+<custom-attributes 
+	xmlns="http://ez.no/crowd/ldap.custom-attributes.xsd"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ez.no/crowd/ldap.custom-attributes.xsd http://ez.no/crowd/ldap.custom-attributes.xsd">
+  	  
 	<directory name="Community LDAP"> 
 		<server>http://sdfasdf.no:8000</server>
 		<server>123456789</server>
@@ -25,11 +29,25 @@
 			</attribute>
 			<attribute key="someDouble" type="DOUBLE">
 				<ldap-name>double</ldap-name>
-			</attribute>			
+			</attribute>
+			<attribute key="created" type="DATETIME" operational="true">
+				<ldap-name>createTime</ldap-name>
+			</attribute>
+			<attribute key="createdXml" type="DATETIME">
+				<ldap-name>created</ldap-name>
+				<format pattern="yyyy-MM-dd'T'kk:mm:ssZ" time-zone="+01:00"/>
+				<format pattern="yyyy-MM-dd'T'kk:mm:ss"/>
+			</attribute>
 		</user>
 		<group>
 			<attribute key="groupName" type="STRING">
 				<ldap-name>displayName</ldap-name>
+			</attribute>
+			<attribute key="created" type="DATETIME" operational="true">
+				<ldap-name>createTime</ldap-name>
+			</attribute>
+			<attribute key="modified" type="DATETIME" operational="true">
+				<ldap-name>modifyTime</ldap-name>
 			</attribute>
 		</group>
 	</directory>

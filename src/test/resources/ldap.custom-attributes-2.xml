@@ -1,6 +1,10 @@
-<!DOCTYPE custom-attributes SYSTEM "http://ez.no/crowd/ldap.custom-attributes.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
 
-<custom-attributes>  
+<custom-attributes 
+	xmlns="http://ez.no/crowd/ldap.custom-attributes.xsd"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://ez.no/crowd/ldap.custom-attributes.xsd http://ez.no/crowd/ldap.custom-attributes.xsd">
+	
 	<directory name="Community LDAP"> 
 		<server>http://sdfasdf.no:8000</server>
 		<server></server>

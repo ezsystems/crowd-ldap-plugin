@@ -32,11 +32,15 @@ public class ConfigurationTest  {
 		
 		Collection<CustomAttribute> attrs = configuration.readUserAttributes(100, "http://sdfasdf.no:8000");
 
-		CustomAttribute attr = CustomAttribute.findByKey("photo", attrs);
+		CustomAttribute photoAttr = CustomAttribute.findByKey("photo", attrs);
 		
-		Assert.assertEquals("photo", attr.getKey());
-		Assert.assertEquals(AttributeType.BINARY, attr.getType());
-		Assert.assertEquals("jpegPhoto", attr.getLdapName());
+		Assert.assertEquals("photo", photoAttr.getKey());
+		Assert.assertEquals(AttributeType.BINARY, photoAttr.getType());
+		Assert.assertEquals("jpegPhoto", photoAttr.getLdapName());
+		Assert.assertEquals(false, photoAttr.isOperational());
+		
+		CustomAttribute createdAttr = CustomAttribute.findByKey("created", attrs);
+		Assert.assertEquals(true, createdAttr.isOperational());
 		
 		CustomAttribute attrNull = CustomAttribute.findByKey("unknown", attrs);
 		Assert.assertNull(attrNull);

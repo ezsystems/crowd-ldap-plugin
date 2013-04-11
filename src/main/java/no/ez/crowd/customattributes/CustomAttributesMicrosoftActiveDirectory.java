@@ -1,6 +1,9 @@
 package no.ez.crowd.customattributes;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +21,8 @@ import com.atlassian.event.api.EventPublisher;
  *  The name of this class must be set in the database. The configuration file must
  *  be created in the Crowd home directory based on <code>ldap.custom-attributes.dtd</code>
  *  which must be found in the root of class path (usually just in the jar file).  
+ *  
+ *  DO NOT MOVE OR REMANE THIS CLASS. Crowd configuration references this class by class name.
  * 
  *  @author rodion.alukhanov
  */
@@ -26,7 +31,7 @@ public class CustomAttributesMicrosoftActiveDirectory extends MicrosoftActiveDir
 	private final Logger logger = LoggerFactory.getLogger(CustomAttributesMicrosoftActiveDirectory.class);
 	
 
-	private final AttributeMapperCreater customAttributesMapperCreator;
+	private final AttributeMapperCreater attributesMapperCreator;
 	
 
 	public CustomAttributesMicrosoftActiveDirectory(
@@ -36,7 +41,7 @@ public class CustomAttributesMicrosoftActiveDirectory extends MicrosoftActiveDir
 		
 		super(ldapQueryTranslater, eventPublisher, instanceFactory);
 		
-		customAttributesMapperCreator = new AttributeMapperCreater();
+		attributesMapperCreator = new AttributeMapperCreater();
 	}
 	
 	
@@ -49,17 +54,36 @@ public class CustomAttributesMicrosoftActiveDirectory extends MicrosoftActiveDir
 	public String getDescriptiveName() {
         return CustomAttributesMicrosoftActiveDirectory.getStaticDirectoryType();
     }
+    
+    
+    @Override
+	protected Map<String, String> getBaseEnvironmentProperties(){
+    	Map<String, String> env = ldapPropertiesMapper.getEnvironment();
+    	
+    	if (env == null) { // who knows
+    		logger.warn("No environment properties got from LdapPropertiesMapper [" + ldapPropertiesMapper + "]. Creating new property map.");
+    		env = new HashMap<String, String>();
+    	}
+    	
+    	long directoryId = getDirectoryId();
+		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
+		
+    	attributesMapperCreator.putBinaryAttributes(env, directoryId, directoryUrl);
+    	
+    	return env;
+    }
 	
 	
     @Override
 	protected List<AttributeMapper> getCustomUserAttributeMappers() {
 		
-		List<AttributeMapper> result = super.getCustomUserAttributeMappers();
+    	// creating a new list. In the Crowd version 2.6 the super implementation generates immutable lists.
+		List<AttributeMapper> result = new ArrayList<AttributeMapper>(super.getCustomUserAttributeMappers());
 		
 		long directoryId = getDirectoryId();
 		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
 		
-		List<? extends AttributeMapper> customMappers = customAttributesMapperCreator.createUserAttributeMappers(directoryId, directoryUrl);
+		List<? extends AttributeMapper> customMappers = attributesMapperCreator.createUserAttributeMappers(directoryId, directoryUrl);
 		result.addAll(customMappers);
 		
 		if (logger.isDebugEnabled()) {
@@ -72,15 +96,29 @@ public class CustomAttributesMicrosoftActiveDirectory extends MicrosoftActiveDir
 	}
     
     
+//    @Override
+//	protected SearchControls getSubTreeSearchControl() {
+//    	SearchControls result = super.getSubTreeSearchControl();
+//    	
+//    	long directoryId = getDirectoryId();
+//		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
+//
+//    	attributesMapperCreator.putOperationalAttribute(result, directoryId, directoryUrl);
+//
+//    	return result;
+//	}
+    
+    
     @Override
 	protected List<AttributeMapper> getCustomGroupAttributeMappers() {
 		
-		List<AttributeMapper> result = super.getCustomGroupAttributeMappers();
+    	// creating a new list. In the Crowd version 2.6 the super implementation generates immutable lists.
+		List<AttributeMapper> result = new ArrayList<AttributeMapper>(super.getCustomGroupAttributeMappers());
 		
 		long directoryId = getDirectoryId();
 		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
 		
-		List<? extends AttributeMapper> customMappers = customAttributesMapperCreator.createGroupAttributeMappers(directoryId, directoryUrl);
+		List<? extends AttributeMapper> customMappers = attributesMapperCreator.createGroupAttributeMappers(directoryId, directoryUrl);
 		result.addAll(customMappers);
 		
 		if (logger.isDebugEnabled()) {

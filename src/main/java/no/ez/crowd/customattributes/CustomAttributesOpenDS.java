@@ -1,5 +1,6 @@
 package no.ez.crowd.customattributes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.atlassian.crowd.directory.OpenDS;
-import com.atlassian.crowd.directory.ldap.LDAPPropertiesMapperImpl;
 import com.atlassian.crowd.directory.ldap.mapper.attribute.AttributeMapper;
 import com.atlassian.crowd.password.factory.PasswordEncoderFactory;
 import com.atlassian.crowd.search.ldap.LDAPQueryTranslater;
@@ -20,7 +20,9 @@ import com.atlassian.event.api.EventPublisher;
  * 
  *  The name of this class must be set in the database. The configuration file must
  *  be created in the Crowd home directory based on <code>ldap.custom-attributes.dtd</code>
- *  which must be found in the root of class path (usually just in the jar file).  
+ *  which must be found in the root of class path (usually just in the jar file).<br><br>
+ *  
+ *  DO NOT MOVE OR RENAME THIS CLASS. Crowd configuration references this class by class name. 
  * 
  *  @author rodion.alukhanov
  */
@@ -30,7 +32,7 @@ public class CustomAttributesOpenDS extends OpenDS {
 	private final Logger logger = LoggerFactory.getLogger(CustomAttributesOpenDS.class);
 	
 
-	private final AttributeMapperCreater customAttributesMapperCreator;
+	private final AttributeMapperCreater attributesMapperCreator;
 	
 
 	public CustomAttributesOpenDS(
@@ -41,7 +43,7 @@ public class CustomAttributesOpenDS extends OpenDS {
 		
 		super(ldapQueryTranslater, eventPublisher, instanceFactory, passwordEncoderFactory);
 		
-		customAttributesMapperCreator = new AttributeMapperCreater();
+		attributesMapperCreator = new AttributeMapperCreater();
 	}
 	
 	
@@ -52,31 +54,51 @@ public class CustomAttributesOpenDS extends OpenDS {
     
     @Override
 	public String getDescriptiveName() {
-        return CustomAttributesMicrosoftActiveDirectory.getStaticDirectoryType();
+        return CustomAttributesOpenDS.getStaticDirectoryType();
     }
     
     
     @Override
 	protected Map<String, String> getBaseEnvironmentProperties(){
-    	Map<String, String> result = ldapPropertiesMapper.getEnvironment();
+    	Map<String, String> env = ldapPropertiesMapper.getEnvironment();
     	
-    	if (result == null) { // who knows
-    		result = new HashMap<String, String>();
+    	if (env == null) { // who knows
+    		logger.warn("No environment properties got from LdapPropertiesMapper [" + ldapPropertiesMapper + "]. Creating new property map.");
+    		env = new HashMap<String, String>();
     	}
     	
-    	String binAttributes = result.get(LDAPPropertiesMapperImpl.CONNECTION_BINARY_ATTRIBUTES);
+    	long directoryId = getDirectoryId();
+		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
+		
+    	attributesMapperCreator.putBinaryAttributes(env, directoryId, directoryUrl);
+    	
+    	return env;
     }
-	
     
-    @Override
+    
+//    @Override
+//	protected SearchControls getSubTreeSearchControl() {
+//    	SearchControls result = super.getSubTreeSearchControl();
+//    	
+//    	long directoryId = getDirectoryId();
+//		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
+//
+//    	attributesMapperCreator.putOperationalAttribute(result, directoryId, directoryUrl);
+//
+//    	return result;
+//	}
+
+
+	@Override
 	protected List<AttributeMapper> getCustomUserAttributeMappers() {
 		
-		List<AttributeMapper> result = super.getCustomUserAttributeMappers();
+		// creating a new list. In the Crowd version 2.6 the super implementation generates immutable lists. 
+		List<AttributeMapper> result = new ArrayList<AttributeMapper>(super.getCustomUserAttributeMappers());
 		
 		long directoryId = getDirectoryId();
 		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
 		
-		List<? extends AttributeMapper> customMappers = customAttributesMapperCreator.createUserAttributeMappers(directoryId, directoryUrl);
+		List<? extends AttributeMapper> customMappers = attributesMapperCreator.createUserAttributeMappers(directoryId, directoryUrl);
 		result.addAll(customMappers);
 		
 		if (logger.isDebugEnabled()) {
@@ -92,12 +114,13 @@ public class CustomAttributesOpenDS extends OpenDS {
     @Override
 	protected List<AttributeMapper> getCustomGroupAttributeMappers() {
 		
-		List<AttributeMapper> result = super.getCustomGroupAttributeMappers();
+    	// creating a new list. In the Crowd version 2.6 the super implementation generates immutable lists.
+		List<AttributeMapper> result = new ArrayList<AttributeMapper>(super.getCustomGroupAttributeMappers());
 		
 		long directoryId = getDirectoryId();
 		String directoryUrl = ldapPropertiesMapper.getConnectionURL();
 		
-		List<? extends AttributeMapper> customMappers = customAttributesMapperCreator.createGroupAttributeMappers(directoryId, directoryUrl);
+		List<? extends AttributeMapper> customMappers = attributesMapperCreator.createGroupAttributeMappers(directoryId, directoryUrl);
 		result.addAll(customMappers);
 		
 		if (logger.isDebugEnabled()) {
